@@ -1,0 +1,11 @@
+[
+  { "tid": "2026-10-20T10:14:00+02:00", "tjeneste": "innlogging", "versjon": "4.8.0", "av": "Hedda Uglevik", "endring": "Passkey som innloggingsmetode for alle brukere." },
+  { "tid": "2026-10-21T13:40:00+02:00", "tjeneste": "betaling", "versjon": "2.13.2", "av": "Release-tog", "endring": "Oppdatert avhengigheter, ingen funksjonelle endringer." },
+  { "tid": "2026-10-22T09:05:00+02:00", "tjeneste": "kunde-db", "versjon": "cron-konfig r41", "av": "Even Gravdal", "endring": "Flyttet ukentlig-vedlikehold fra søndag 04:00 til torsdag 03:30 for å unngå kollisjon med søndagsbackup." },
+  { "tid": "2026-10-23T15:22:00+02:00", "tjeneste": "sok", "versjon": "3.9.0", "av": "Mina Spøkelsesen", "endring": "Ny rangering av treff (mer vekt på lagerstatus)." },
+  { "tid": "2026-10-26T11:30:00+01:00", "tjeneste": "varsling", "versjon": "1.22.0", "av": "Jonas Kistesen", "endring": "Oppgradert SmsBud-klient fra 3.1 til 3.2. Ny retry-policy: 5 forsøk med kort pause (før: 3 forsøk med eksponentiell pause)." },
+  { "tid": "2026-10-27T14:10:00+01:00", "tjeneste": "sok", "versjon": "3.9.1", "av": "Mina Spøkelsesen", "endring": "Ny synonymliste for høstkampanjen." },
+  { "tid": "2026-10-28T09:45:00+01:00", "tjeneste": "innlogging", "versjon": "4.8.1", "av": "Hedda Uglevik", "endring": "Retter tekst i feilmelding ved utløpt engangskode." },
+  { "tid": "2026-10-28T14:02:00+01:00", "tjeneste": "api-gateway", "versjon": "konfig timeouts.yaml r17", "av": "Trond Benrangel", "endring": "Økt timeout for /api/rapport fra 30 s til 60 s. Andre ruter uendret (30 s)." },
+  { "tid": "2026-10-29T02:51:12+01:00", "tjeneste": "betaling", "versjon": "2.14.0", "av": "Release-tog natt-1029", "endring": "Ny gebyrberegning for utenlandske kort. Valuta hentes nå fra kortinfo-objektet i stedet for fra transaksjonen." }
+]

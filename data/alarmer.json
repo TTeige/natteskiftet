@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ALARM-0312",
+    "tid": "2026-10-29T03:12:00+01:00",
+    "tjeneste": "betaling",
+    "alvorlighet": "kritisk",
+    "tittel": "Feilrate 5xx over terskel",
+    "tekst": "betaling: andel 5xx-svar siste 5 min er 9.4 % (terskel 5 %). Gjelder POST /betaling/trekk."
+  },
+  {
+    "id": "ALARM-0305",
+    "tid": "2026-10-29T03:05:00+01:00",
+    "tjeneste": "innlogging",
+    "alvorlighet": "advarsel",
+    "tittel": "Diskbruk høy",
+    "tekst": "innlogging-02: /var er 91 % full (terskel 90 %)."
+  },
+  {
+    "id": "ALARM-0320",
+    "tid": "2026-10-29T03:20:00+01:00",
+    "tjeneste": "sok",
+    "alvorlighet": "høy",
+    "tittel": "Treg responstid",
+    "tekst": "sok: p95 responstid 4.6 s (terskel 2 s). Noen søk fra api-gateway får 504."
+  },
+  {
+    "id": "ALARM-0331",
+    "tid": "2026-10-29T03:31:00+01:00",
+    "tjeneste": "varsling",
+    "alvorlighet": "høy",
+    "tittel": "SMS-leveringsrate lav",
+    "tekst": "varsling: bare 58 % av SMS-er levert siste 10 min (terskel 90 %). Kø sms-utgående vokser."
+  },
+  {
+    "id": "ALARM-0340",
+    "tid": "2026-10-29T03:40:00+01:00",
+    "tjeneste": "api-gateway",
+    "alvorlighet": "kritisk",
+    "tittel": "Mange 504 Gateway Timeout",
+    "tekst": "api-gateway: 17.2 % av kallene siste 5 min ender i 504 (terskel 5 %). Brukere melder at de ikke kommer inn på Min side."
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "id": "INC-2026-004",
+    "dato": "2026-01-15",
+    "tjeneste": "innlogging",
+    "alvorlighet": "advarsel",
+    "tittel": "Diskbruk 92 % på innlogging-01",
+    "sammendrag": "Alarm kl 03:04. Loggrotasjonen kjører kl 03:00 og pakker loggene før de gamle slettes, så disken blir midlertidig full. Gikk ned til 51 % av seg selv kl 03:10.",
+    "rotårsak": "Ingen feil. Midlertidig diskbruk under loggrotasjon.",
+    "tiltak": "Ingen. Foreslått å heve terskelen eller dempe alarmen mellom 03:00 og 03:15.",
+    "varighet_min": 6
+  },
+  {
+    "id": "INC-2026-009",
+    "dato": "2026-02-03",
+    "tjeneste": "betaling",
+    "alvorlighet": "kritisk",
+    "tittel": "Feilrate 5xx etter utrulling 2.9.0",
+    "sammendrag": "5xx-raten steg til 12 % to minutter etter utrulling av 2.9.0. Ny kode antok at alle transaksjoner hadde et kunde-objekt, men gjestekjøp har ikke det. TypeError i loggene.",
+    "rotårsak": "Kodefeil i ny versjon (manglende null-sjekk).",
+    "tiltak": "Rullet tilbake til 2.8.4 etter 18 min. Feilraten normal 2 min etter. Rettet i 2.9.1.",
+    "varighet_min": 24
+  },
+  {
+    "id": "INC-2026-014",
+    "dato": "2026-03-11",
+    "tjeneste": "kunde-db",
+    "alvorlighet": "kritisk",
+    "tittel": "Tilkoblingene brukt opp, innlogging nede",
+    "sammendrag": "pgbouncer på db-proxy-01 gikk tom for minne og sluttet å slippe gjennom tilkoblinger. Innlogging og betaling fikk timeout. Løst ved å restarte pgbouncer.",
+    "rotårsak": "Minnelekkasje i pgbouncer.",
+    "tiltak": "Restart av pgbouncer. Besluttet å fjerne pgbouncer og koble direkte til kunde-db (gjort 12. mars).",
+    "varighet_min": 41
+  },
+  {
+    "id": "INC-2026-018",
+    "dato": "2026-04-02",
+    "tjeneste": "varsling",
+    "alvorlighet": "høy",
+    "tittel": "SMS-leveranse nede hos SmsBud",
+    "sammendrag": "Alle SMS-kall feilet med timeout fra 14:10. SmsBud bekreftet driftsavbrudd på sin statusside kl 14:25. E-post og push gikk som normalt.",
+    "rotårsak": "Driftsavbrudd hos ekstern leverandør SmsBud.",
+    "tiltak": "Ventet på SmsBud. Satt opp varsel på statussiden deres. Diskutert reserveleverandør, ikke besluttet.",
+    "varighet_min": 72
+  },
+  {
+    "id": "INC-2026-022",
+    "dato": "2026-04-30",
+    "tjeneste": "api-gateway",
+    "alvorlighet": "høy",
+    "tittel": "504 på /api/rapport",
+    "sammendrag": "Månedsrapporter tok over 30 s og ble kuttet av gatewayen. Bare /api/rapport var rammet.",
+    "rotårsak": "For lav timeout for tunge rapportkall.",
+    "tiltak": "Midlertidig økt timeout for /api/rapport. Rapportene skal flyttes til en bakgrunnsjobb.",
+    "varighet_min": 95
+  },
+  {
+    "id": "INC-2026-026",
+    "dato": "2026-05-19",
+    "tjeneste": "innlogging",
+    "alvorlighet": "advarsel",
+    "tittel": "Diskbruk 90 % på innlogging-02",
+    "sammendrag": "Samme mønster som INC-2026-004. Alarm kl 03:05, borte kl 03:09 da loggrotasjonen var ferdig.",
+    "rotårsak": "Ingen feil. Loggrotasjon.",
+    "tiltak": "Ingen. Terskelendring står fortsatt på lista til Team Nøkkelknippe.",
+    "varighet_min": 4
+  },
+  {
+    "id": "INC-2026-031",
+    "dato": "2026-06-25",
+    "tjeneste": "sok",
+    "alvorlighet": "høy",
+    "tittel": "Treg søk under nattlig reindeks",
+    "sammendrag": "nattlig-reindeks startet kl 03:00 som fullindeks i stedet for inkrementell. Heap på sok-node-2 over 90 %, lange GC-pauser, p95 opp mot 5 s og enkelte 504 fra gatewayen fra ca 03:08.",
+    "rotårsak": "Fullindeks kjørt på samme noder som tar trafikk. sok-node-2 har for lite heap til begge deler.",
+    "tiltak": "Pauset reindeksen (se runbook sok.md). Responstiden normal etter 3 min. Reindeks fullført neste natt i inkrementell modus.",
+    "varighet_min": 22
+  },
+  {
+    "id": "INC-2026-037",
+    "dato": "2026-08-14",
+    "tjeneste": "betaling",
+    "alvorlighet": "høy",
+    "tittel": "Treg betaling, Kortnett",
+    "sammendrag": "Kortnett svarte på 3-6 s i en halvtime. Betaling ga timeout på en del kall, men ingen 5xx fra vår kode.",
+    "rotårsak": "Ekstern: treghet hos Kortnett.",
+    "tiltak": "Ingen tiltak hos oss. Kortnett sendte forklaring dagen etter.",
+    "varighet_min": 33
+  },
+  {
+    "id": "INC-2026-041",
+    "dato": "2026-09-09",
+    "tjeneste": "kunde-db",
+    "alvorlighet": "høy",
+    "tittel": "Migrering låste tabell",
+    "sammendrag": "En databasemigrering i innlogging la til en kolonne med standardverdi på sesjoner og låste tabellen i 9 min. Innlogging fikk timeout og gatewayen ga 504 på /api/konto.",
+    "rotårsak": "Lås på sesjoner-tabellen fra migrering kjørt i arbeidstiden.",
+    "tiltak": "Ventet til migreringen var ferdig. Ny regel: migreringer som låser store tabeller kjøres kun med avtale med Team Grunnmur.",
+    "varighet_min": 12
+  },
+  {
+    "id": "INC-2026-044",
+    "dato": "2026-10-01",
+    "tjeneste": "api-gateway",
+    "alvorlighet": "advarsel",
+    "tittel": "Rate limiting av intern klient",
+    "sammendrag": "Klient 10.4.7.22 (intern prisovervåker) ble rate-limited på /api/sok. Ingen påvirkning på brukere.",
+    "rotårsak": "Intern klient spør for ofte. Ikke en feil hos oss.",
+    "tiltak": "Ingen. Advarslene i loggen er forventet.",
+    "varighet_min": 0
+  }
+]

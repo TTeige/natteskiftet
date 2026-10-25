@@ -1,0 +1,44 @@
+[
+  {
+    "navn": "api-gateway",
+    "beskrivelse": "Inngangen for alle kall fra app og nett. Ruter videre til tjenestene bak. Timeout 30 s per kall (60 s for /api/rapport).",
+    "eier_team": "Team Portvokter",
+    "vakt": { "primær": "Trond Benrangel", "sekundær": "Ida Nattmo" },
+    "avhengigheter": ["innlogging", "betaling", "sok", "varsling"]
+  },
+  {
+    "navn": "innlogging",
+    "beskrivelse": "Innlogging, sesjoner og engangskoder. Sesjonene lagres i tabellen sesjoner i kunde-db.",
+    "eier_team": "Team Nøkkelknippe",
+    "vakt": { "primær": "Hedda Uglevik", "sekundær": "Petter Mørkeskog" },
+    "avhengigheter": ["kunde-db", "varsling"]
+  },
+  {
+    "navn": "betaling",
+    "beskrivelse": "Kortbetaling og refusjon. Snakker med ekstern kortleverandør Kortnett.",
+    "eier_team": "Team Myntkammer",
+    "vakt": { "primær": "Sigrid Gravlund", "sekundær": "Ola Benkvist" },
+    "avhengigheter": ["kunde-db", "Kortnett (ekstern)"]
+  },
+  {
+    "navn": "sok",
+    "beskrivelse": "Produktsøk. Egen søkeklynge med tre noder (sok-node-1, -2, -3). Nattlig reindeks kl 03:00.",
+    "eier_team": "Team Spåkula",
+    "vakt": { "primær": "Mina Spøkelsesen", "sekundær": "Arne Lyktemann" },
+    "avhengigheter": []
+  },
+  {
+    "navn": "varsling",
+    "beskrivelse": "Sender SMS (via SmsBud), e-post og push. Engangskoder for innlogging går herfra.",
+    "eier_team": "Team Ugla",
+    "vakt": { "primær": "Jonas Kistesen", "sekundær": "Live Huldersen" },
+    "avhengigheter": ["SmsBud (ekstern)"]
+  },
+  {
+    "navn": "kunde-db",
+    "beskrivelse": "Felles PostgreSQL for innlogging og betaling. Maks 200 tilkoblinger. Applikasjonene kobler direkte til databasen (pgbouncer ble fjernet 12. mars 2026). Ukentlig vedlikehold via cron.",
+    "eier_team": "Team Grunnmur",
+    "vakt": { "primær": "Even Gravdal", "sekundær": "Rune Skjelbred" },
+    "avhengigheter": []
+  }
+]
