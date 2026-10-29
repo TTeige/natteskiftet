@@ -133,7 +133,7 @@ function styrScenarier(t) {
 }
 
 function startScenario(S, t) {
-  const varighet = heltall(...S.varighet);
+  const varighet = !AUTO && S.harTiltak ? 120 : heltall(...S.varighet);
   const s = { ...S.lag(varighet), navn: S.navn, startTid: t, sluttTid: t + varighet * 60000 };
   const fasit = s.start(t, ctx);
   aktive.push(s);

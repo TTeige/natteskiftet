@@ -2,6 +2,8 @@
 // minutter og gir tilbake fasiten fra start(): det agenten burde finne ut.
 // påvirk() kalles hver tick og skrur på tilstanden, bakgrunn() hvert minutt.
 // enGangPerNatt er for nattlige jobber som ikke gir mening å kjøre to ganger.
+// harTiltak: det finnes et tiltak som løser det. I spilleder-modus går slike
+// feil ikke over av seg selv, så det er agentens tiltak som redder natta.
 // tiltak() får tiltak fra agenten. Returnerer den noe, har scenariet tatt det;
 // med løser: true er scenariet over etter etterMs. Ellers skjer det generiske i tiltak.js.
 import { klokke } from '../tid.js';
@@ -31,6 +33,7 @@ const BETALINGSFEIL = [
 export const SCENARIER = [
   {
     navn: 'betaling-utrulling',
+    harTiltak: true,
     varighet: [25, 40],
     lag() {
       let feil, forrige, ny, løst = false;
@@ -73,6 +76,7 @@ export const SCENARIER = [
 
   {
     navn: 'kunde-db-vedlikehold',
+    harTiltak: true,
     varighet: [18, 30],
     enGangPerNatt: true,
     lag() {
@@ -173,6 +177,7 @@ export const SCENARIER = [
 
   {
     navn: 'sok-fullindeks',
+    harTiltak: true,
     varighet: [15, 25],
     enGangPerNatt: true,
     lag(varighet) {

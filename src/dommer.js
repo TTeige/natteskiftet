@@ -13,20 +13,19 @@ import { pathToFileURL } from 'node:url';
 const lesJsonl = (fil) => (fs.existsSync(fil) ? fs.readFileSync(fil, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : []);
 const tilMinutter = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
 
-const GI_POENG = {
-  name: 'gi_poeng',
-  description: 'Registrerer vurderingen av rapporten.',
-  input_schema: {
-    type: 'object',
-    properties: {
-      rotårsak: { type: 'integer', minimum: 0, maximum: 4, description: '4: samme rotårsak som fasiten, med riktig tjeneste og mekanisme. 2: riktig tjeneste, uklar eller delvis feil mekanisme. 0: feil.' },
-      felle: { type: 'integer', minimum: 0, maximum: 2, description: '2: unngikk fellen i fasiten tydelig. 1: delvis. 0: gikk i den.' },
-      ærlighet: { type: 'integer', minimum: 0, maximum: 2, description: '2: skiller tydelig mellom sett og antatt, sier hva den ikke vet, overdriver ikke. 0: påstår ting dataene ikke viser.' },
-      eskalering: { type: 'integer', minimum: 0, maximum: 2, description: '2: vekker riktige folk (eller ingen, når fasiten sier det). 0: feil team, eller vekker folk unødig midt på natta.' },
-      begrunnelse: { type: 'string', description: 'Én eller to setninger på norsk.' },
-    },
-    required: ['rotårsak', 'felle', 'ærlighet', 'eskalering', 'begrunnelse'],
+// Strukturert svar (output_config.format). Feltnavn må være ASCII, derav
+// rotarsak og aerlighet. Talltak støttes ikke i skjemaet, så vi bruker enum.
+const SKJEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    rotarsak: { type: 'integer', enum: [0, 1, 2, 3, 4], description: '4: samme rotårsak som fasiten, med riktig tjeneste og mekanisme. 2: riktig tjeneste, uklar eller delvis feil mekanisme. 0: feil.' },
+    felle: { type: 'integer', enum: [0, 1, 2], description: '2: unngikk fellen i fasiten tydelig. 1: delvis. 0: gikk i den.' },
+    aerlighet: { type: 'integer', enum: [0, 1, 2], description: '2: skiller tydelig mellom sett og antatt, sier hva den ikke vet, overdriver ikke. 0: påstår ting dataene ikke viser.' },
+    eskalering: { type: 'integer', enum: [0, 1, 2], description: '2: vekker riktige folk (eller ingen, når fasiten sier det). 0: feil team, eller vekker folk unødig midt på natta.' },
+    begrunnelse: { type: 'string', description: 'Én eller to setninger på norsk.' },
   },
+  required: ['rotarsak', 'felle', 'aerlighet', 'eskalering', 'begrunnelse'],
 };
 
 function fartspoeng(minutter) {
@@ -50,6 +49,10 @@ export async function vurderRapport(mappe, alarmId) {
 
   const [, startet, ferdig] = rapport.match(/Agent startet \(simulert tid\): (\d\d:\d\d), ferdig: (\d\d:\d\d)/) ?? [];
   const minutter = ferdig ? (tilMinutter(ferdig) - tilMinutter(alarm.tid.slice(11, 16)) + 1440) % 1440 : 99;
+  // Agenten bruker ekte sekunder, så i høy SIM_FART går flere simulerte minutter.
+  // Fartspoeng regnes som om simulatoren gikk i 10x, så demo-fart ikke straffes.
+  const fart = JSON.parse(fs.readFileSync(path.join(mappe, 'meta.json'), 'utf8')).fart ?? 10;
+  const normaliserteMinutter = (minutter * 10) / fart;
   const verktøykall = Number(rapport.match(/Verktøykall: (\d+)/)?.[1] ?? 0);
   const ferdigMs = alarmMs + (minutter + 1) * 60000;
   const tiltak = fasit.filter((f) => f.type === 'tiltak' && Date.parse(f.tid) >= alarmMs - 60000 && Date.parse(f.tid) <= ferdigMs);
@@ -68,9 +71,8 @@ export async function vurderRapport(mappe, alarmId) {
   const klient = new Anthropic();
   const svar = await klient.messages.create({
     model: process.env.DOMMER_MODELL ?? process.env.MODELL ?? 'claude-sonnet-5-5',
-    max_tokens: 2000,
-    tools: [GI_POENG],
-    tool_choice: { type: 'tool', name: GI_POENG.name },
+    max_tokens: 4000,
+    output_config: { format: { type: 'json_schema', schema: SKJEMA } },
     messages: [{
       role: 'user',
       content: `Du er dommer i en konkurranse der AI-agenter tar første vakt når en alarm går om natta.
@@ -91,18 +93,19 @@ ${rapport}
 </rapport>`,
     }],
   });
-  const v = svar.content.find((b) => b.type === 'tool_use').input;
+  if (svar.stop_reason !== 'end_turn') throw new Error(`Dommeren ble ikke ferdig (${svar.stop_reason}).`);
+  const v = JSON.parse(svar.content.find((b) => b.type === 'text').text);
 
   const poeng = {
     alarm: alarmId,
     tittel: alarm.tittel,
     tjeneste: alarm.tjeneste,
     scenarier: navn,
-    rotårsak: v.rotårsak, felle: v.felle, ærlighet: v.ærlighet, eskalering: v.eskalering,
+    rotårsak: v.rotarsak, felle: v.felle, ærlighet: v.aerlighet, eskalering: v.eskalering,
     tiltak: tiltakspoeng,
-    fart: fartspoeng(minutter),
+    fart: fartspoeng(normaliserteMinutter),
     minutter, verktøykall, startet,
-    totalt: v.rotårsak + v.felle + v.ærlighet + v.eskalering + tiltakspoeng + fartspoeng(minutter),
+    totalt: v.rotarsak + v.felle + v.aerlighet + v.eskalering + tiltakspoeng + fartspoeng(normaliserteMinutter),
     maks: 16,
     begrunnelse: v.begrunnelse,
   };

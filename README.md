@@ -13,7 +13,20 @@ npm start                   # kjører eksempelalarmen (betaling kl 03:12)
 npm start -- "ALARM kl 03:40: api-gateway gir 17 % 504"
 ```
 
-Agenten har sju verktøy: `sok_i_logger`, `hent_runbook`, `sjekk_deploy_historikk`, `finn_lignende_hendelser`, `hent_tjenesteinfo`, `hent_metrikker` og `hent_alarmer`.
+Agenten har åtte verktøy: `sok_i_logger`, `hent_runbook`, `sjekk_deploy_historikk`, `finn_lignende_hendelser`, `hent_tjenesteinfo`, `hent_metrikker`, `hent_alarmer` og `utfor_tiltak`.
+
+## Demo-dashbord
+
+```bash
+npm run demo                # simulator + agent + dashbord på http://localhost:3000
+npm run dommer              # gi poeng til rapporter som ikke er vurdert ennå
+```
+
+Dashbordet viser tjenestekartet live, agentens verktøykall mens den jobber, alarmer, logger og poengtavle. Agenten kan foreslå tiltak (`utfor_tiltak`: rollback, avbryte en databaseprosess, pause reindeks, pause en varslingsmal, restart). Hvert tiltak må godkjennes i nettleseren, og tiltaket virker faktisk i simulatoren. Feil tiltak løser ingenting og gir minuspoeng.
+
+`npm run demo` starter i spilleder-modus (`SIM_AUTO=0`, 20x fart): ingen feil før du trykker **💀 Slipp løs**, og feil som har et tiltak går ikke over av seg selv. Se [DEMO.md](DEMO.md) for et manus på 3 minutter.
+
+Dommeren gir 0-16 poeng: rotårsak (4), felle (2), ærlighet (2) og eskalering (2) vurderes av en språkmodell mot fasiten; tiltak (+3 for riktig, -1 for unødvendig, -2 for grovt) og fart (3) regnes ut av det simulatoren registrerte.
 
 ## Live-simulator
 
@@ -37,7 +50,10 @@ Simulatoren setter i gang ett feilscenario om gangen med pauser imellom: feil ut
 | `SIM_FORSTE` / `SIM_PAUSE_MIN` / `SIM_PAUSE_MAKS` | `5` / `5` / `15` | Minutter før første scenario og mellom dem |
 | `SIM_OVERLAPP` | av | `1` lar scenarier gå samtidig |
 | `SIM_LOGG_UTVALG` | `0.05` | Andel vellykkede kall som logges |
-| `VAKT_MAKS` | `5` | Antall alarmer vakta tar før den går av (hver koster et agentkall) |
+| `SIM_AUTO` | på | `0` = spilleder-modus: feil startes bare fra dashbordet |
+| `VAKT_MAKS` | `5` (`20` i demo) | Antall hendelser agenten tar før den går av (hver koster et agentkall) |
+| `TILTAK_GODKJENNING` | `spør` | `auto` godkjenner alle tiltak, `aldri` avviser alle |
+| `DASHBORD_PORT` | `3000` | |
 
 Simulatoren sletter `live/` og starter på nytt hver gang.
 
@@ -48,6 +64,9 @@ src/index.js           startpunktet, leser spørsmålet fra kommandolinja
 src/agent.js           agentløkka: spør modellen, kjør verktøy, gjenta
 src/verktoy.js         system-prompt, eksempelalarm og verktøyene
 src/vakt.js            kjører agenten på nye alarmer fra simulatoren
+src/vaktrunde.js       felles for vakt og dashbord: én agentrunde per hendelse
+src/dommer.js          poeng mot fasiten
+src/dashbord/          demo-dashbordet
 src/simulator/         simulatoren: trafikk, scenarier, alarmregler
 data/alarmer.json      fem alarmer fra natt til 29. oktober
 data/logger.json       ca 250 logglinjer fra 02:30 til 03:50

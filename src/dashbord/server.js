@@ -18,6 +18,10 @@ try {
 }
 
 process.env.DATA_DIR ??= 'live';
+// Demo-oppsett: ingenting skjer før spillederen slipper løs en feil, og 20x
+// fart så alarmen går ca 10 s etter. Overstyr med SIM_AUTO=1 og SIM_FART.
+process.env.SIM_AUTO ??= '0';
+process.env.SIM_FART ??= '20';
 const MAPPE = path.resolve(process.env.DATA_DIR);
 const PORT = Number(process.env.DASHBORD_PORT ?? 3000);
 const MAKS = Number(process.env.VAKT_MAKS ?? 20);
