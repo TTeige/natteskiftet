@@ -13,7 +13,33 @@ npm start                   # kjører eksempelalarmen (betaling kl 03:12)
 npm start -- "ALARM kl 03:40: api-gateway gir 17 % 504"
 ```
 
-Agenten har bare ett verktøy fra start (`sok_i_logger`). Resten er stubber dere fyller inn.
+Agenten har sju verktøy: `sok_i_logger`, `hent_runbook`, `sjekk_deploy_historikk`, `finn_lignende_hendelser`, `hent_tjenesteinfo`, `hent_metrikker` og `hent_alarmer`.
+
+## Live-simulator
+
+I stedet for de faste filene i `data/` kan dere kjøre en simulert natt som lager trafikk, logger, metrikker, utrullinger og alarmer fortløpende:
+
+```bash
+npm run simulator           # terminal 1: simulerer natta fra 02:30 i 10x fart, skriver til live/
+npm run vakt                # terminal 2: setter agenten på hver ny alarm, rapporter i live/rapporter/
+DATA_DIR=live npm start -- "ALARM kl 03:12: ..."   # eller kjør agenten manuelt mot live-data
+```
+
+Simulatoren setter i gang ett feilscenario om gangen med pauser imellom: feil utrulling i betaling, vedlikeholdsjobb som låser kunde-db, SmsBud nede, fullindeks i sok, disk full under loggrotasjon (ufarlig) og treg Kortnett. Feilene forplanter seg gjennom avhengighetene, så alarmen går ofte et annet sted enn feilen sitter.
+
+`live/fasit.jsonl` har fasiten per scenario og alarm (rotårsak, riktig tiltak, felle) for poengtelling. Agenten skal aldri lese den.
+
+| Variabel | Standard | |
+|---|---|---|
+| `SIM_FART` | `10` | Simulerte sekunder per ekte sekund |
+| `SIM_START` | `02:30` | Når natta starter (i dag) |
+| `SIM_SCENARIO` | alle | Kommaseparert liste, f.eks. `kunde-db-vedlikehold` |
+| `SIM_FORSTE` / `SIM_PAUSE_MIN` / `SIM_PAUSE_MAKS` | `5` / `5` / `15` | Minutter før første scenario og mellom dem |
+| `SIM_OVERLAPP` | av | `1` lar scenarier gå samtidig |
+| `SIM_LOGG_UTVALG` | `0.05` | Andel vellykkede kall som logges |
+| `VAKT_MAKS` | `5` | Antall alarmer vakta tar før den går av (hver koster et agentkall) |
+
+Simulatoren sletter `live/` og starter på nytt hver gang.
 
 ## Hva ligger her
 
@@ -21,6 +47,8 @@ Agenten har bare ett verktøy fra start (`sok_i_logger`). Resten er stubber dere
 src/index.js           startpunktet, leser spørsmålet fra kommandolinja
 src/agent.js           agentløkka: spør modellen, kjør verktøy, gjenta
 src/verktoy.js         system-prompt, eksempelalarm og verktøyene
+src/vakt.js            kjører agenten på nye alarmer fra simulatoren
+src/simulator/         simulatoren: trafikk, scenarier, alarmregler
 data/alarmer.json      fem alarmer fra natt til 29. oktober
 data/logger.json       ca 250 logglinjer fra 02:30 til 03:50
 data/runbooks/*.md     runbooks per tjeneste (ikke alle er like ferske)

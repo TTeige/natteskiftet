@@ -3,7 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "simulator": "node src/simulator/index.js",
+    "vakt": "node src/vakt.js",
+    "demo": "node src/dashbord/server.js",
+    "dommer": "node src/dommer.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.1.0"

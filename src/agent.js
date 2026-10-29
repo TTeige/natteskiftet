@@ -2,18 +2,19 @@
 // den ber om, send resultatene tilbake, gjenta til den er ferdig.
 import Anthropic from '@anthropic-ai/sdk';
 
-const MODELL = process.env.MODELL ?? 'claude-sonnet-5-5';
-
-// Stopper en agent som går i ring før den brenner opp kostnadstaket.
-const MAX_ITERASJONER = Number(process.env.MAX_ITERASJONER ?? 10);
-
-const klient = new Anthropic();
-
 const grå = (t) => `\x1b[90m${t}\x1b[0m`;
 const oransje = (t) => `\x1b[38;5;208m${t}\x1b[0m`;
 const grønn = (t) => `\x1b[32m${t}\x1b[0m`;
 
-export async function kjørAgent({ system, oppgave, verktøy }) {
+// påHendelse får det som skjer underveis (tekst, verktøykall, resultater), for dashbordet.
+export async function kjørAgent({ system, oppgave, verktøy, påHendelse = () => {} }) {
+  // Leses her og ikke på toppen av fila: importer kjører før index.js rekker
+  // å laste .env, så da ville nøkkelen og innstillingene vært tomme.
+  const MODELL = process.env.MODELL ?? 'claude-sonnet-5-5';
+  // Stopper en agent som går i ring før den brenner opp kostnadstaket.
+  const MAX_ITERASJONER = Number(process.env.MAX_ITERASJONER ?? 10);
+  const klient = new Anthropic();
+
   // Bare verktøy med en kjør-funksjon sendes til modellen. Stubbene i
   // verktoy.js blir med av seg selv når dere implementerer dem.
   const aktive = verktøy.filter((v) => v.kjør);
@@ -36,10 +37,14 @@ export async function kjørAgent({ system, oppgave, verktøy }) {
     for (const blokk of svar.content) {
       if (blokk.type === 'text' && blokk.text.trim()) {
         console.log(svar.stop_reason === 'tool_use' ? grå(blokk.text) : blokk.text);
+        påHendelse({ type: svar.stop_reason === 'tool_use' ? 'tanke' : 'rapport', tekst: blokk.text });
       }
     }
 
-    if (svar.stop_reason === 'end_turn') return svar;
+    if (svar.stop_reason === 'end_turn') {
+      påHendelse({ type: 'ferdig', runder: i });
+      return svar;
+    }
     if (svar.stop_reason === 'refusal') {
       console.log(oransje(`\n✖ Modellen avslo (${svar.stop_details?.category ?? 'ukjent grunn'}).`));
       return svar;
@@ -55,12 +60,16 @@ export async function kjørAgent({ system, oppgave, verktøy }) {
     const resultater = [];
     for (const k of kall) {
       console.log(oransje(`→ ${k.name}`) + grå(` ${JSON.stringify(k.input)}`));
-      resultater.push(await kjørVerktøy(etterNavn, k));
+      påHendelse({ type: 'verktøy', navn: k.name, input: k.input });
+      const resultat = await kjørVerktøy(etterNavn, k);
+      påHendelse({ type: 'resultat', navn: k.name, tegn: resultat.content.length, feil: !!resultat.is_error, utdrag: resultat.content.slice(0, 300) });
+      resultater.push(resultat);
     }
     messages.push({ role: 'user', content: resultater });
   }
 
   console.log(oransje(`\n✖ Stoppet etter ${MAX_ITERASJONER} runder (MAX_ITERASJONER).`));
+  påHendelse({ type: 'ferdig', runder: MAX_ITERASJONER, avbrutt: true });
 }
 
 async function kjørVerktøy(etterNavn, kall) {

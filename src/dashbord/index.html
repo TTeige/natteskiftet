@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<title>Natteskiftet 🎃</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0d0b12; --panel: #17131f; --kant: #2a2336; --tekst: #e8e2f0; --dempet: #8b8299;
+    --ok: #3ddc97; --gul: #ffb020; --rød: #ff4d4d; --oransje: #ff7a18; --lilla: #a77bff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(ellipse at top, #1d1428 0%, var(--bg) 60%); color: var(--tekst);
+    font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; min-height: 100vh; }
+  header { display: flex; align-items: center; gap: 18px; padding: 12px 20px; border-bottom: 1px solid var(--kant); flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 20px; letter-spacing: .5px; }
+  h1 span { color: var(--oransje); }
+  .klokke { font: 600 28px/1 ui-monospace, Menlo, monospace; color: var(--oransje); text-shadow: 0 0 18px #ff7a1866; }
+  .fart { color: var(--dempet); font-size: 12px; }
+  .vekst { flex: 1; }
+  .bryter { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; color: var(--dempet); }
+  .bryter input { accent-color: var(--oransje); width: 16px; height: 16px; }
+  select, button { background: var(--panel); color: var(--tekst); border: 1px solid var(--kant); border-radius: 8px; padding: 6px 10px; font: inherit; }
+  button { cursor: pointer; }
+  button.hoved { background: var(--oransje); color: #1a0f05; border-color: var(--oransje); font-weight: 600; }
+  main { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; padding: 14px 20px; }
+  .panel { background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--kant); border-radius: 14px; padding: 12px 14px; }
+  .panel h2 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--dempet); font-weight: 600; }
+  .venstre, .høyre { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+  /* Tjenestekartet */
+  #kart svg { width: 100%; height: auto; display: block; }
+  .node rect { fill: #1f1a2a; stroke: var(--kant); stroke-width: 1.5; rx: 10; transition: fill .4s, stroke .4s; }
+  .node text { fill: var(--tekst); font-size: 13px; font-weight: 600; text-anchor: middle; }
+  .node .under { fill: var(--dempet); font-size: 10.5px; font-weight: 400; font-family: ui-monospace, Menlo, monospace; }
+  .node.ok rect { stroke: var(--ok); }
+  .node.gul rect { stroke: var(--gul); fill: #2b2210; }
+  .node.rød rect { stroke: var(--rød); fill: #2e1214; animation: puls 1.2s infinite; }
+  .node.ekstern rect { stroke-dasharray: 5 4; fill: transparent; }
+  .node.ekstern text { fill: var(--dempet); }
+  @keyframes puls { 50% { stroke-width: 4; filter: drop-shadow(0 0 10px #ff4d4d); } }
+  .kant { stroke: #3a3150; stroke-width: 2; fill: none; }
+  .kant.rød { stroke: var(--rød); stroke-dasharray: 6 6; animation: flyt .8s linear infinite; }
+  .kant.gul { stroke: var(--gul); stroke-dasharray: 6 6; animation: flyt 1.4s linear infinite; }
+  @keyframes flyt { to { stroke-dashoffset: -12; } }
+
+  /* Kort med sparklines */
+  #kort { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .kort { background: #120f19; border: 1px solid var(--kant); border-radius: 10px; padding: 8px 10px; }
+  .kort .navn { font-size: 12px; color: var(--dempet); display: flex; justify-content: space-between; }
+  .kort .verdi { font: 600 20px/1.2 ui-monospace, Menlo, monospace; }
+  .kort svg { width: 100%; height: 34px; display: block; }
+  .kort.rød .verdi { color: var(--rød); } .kort.gul .verdi { color: var(--gul); } .kort.ok .verdi { color: var(--ok); }
+
+  /* Agenten */
+  #agent { min-height: 340px; max-height: 56vh; overflow: auto; }
+  #agent .hendelse { padding: 3px 0; font-size: 13px; }
+  #agent .start { margin-top: 10px; padding: 8px 10px; border-left: 3px solid var(--oransje); background: #22170f; border-radius: 6px; }
+  #agent .tanke { color: var(--dempet); font-style: italic; }
+  #agent .verktøy { font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  #agent .verktøy b { color: var(--oransje); font-weight: 600; }
+  #agent .verktøy.tiltak b { color: var(--lilla); }
+  #agent .resultat { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; color: var(--ok); padding-left: 14px; }
+  #agent .resultat.feil { color: var(--rød); }
+  #agent .rapport { margin: 8px 0; padding: 10px 12px; background: #120f19; border: 1px solid var(--kant); border-radius: 10px; }
+  #agent .rapport h3, #agent .rapport h4 { margin: 8px 0 4px; font-size: 14px; color: var(--oransje); }
+  #agent .rapport p { margin: 6px 0; } #agent .rapport ul, #agent .rapport ol { margin: 4px 0; padding-left: 20px; }
+  #agent .rapport code { background: #2a2336; padding: 1px 4px; border-radius: 4px; font-size: 12px; }
+  #agent .feilmelding { color: var(--rød); }
+  .tenker { color: var(--oransje); font-size: 13px; padding: 6px 0; }
+  .tenker::after { content: '…'; animation: prikk 1s steps(3) infinite; }
+  @keyframes prikk { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
+  .tom { color: var(--dempet); font-style: italic; }
+
+  #alarmer { max-height: 190px; overflow: auto; font-size: 12.5px; }
+  .alarm { padding: 4px 0; border-bottom: 1px dashed #2a2336; }
+  .alarm .tid { font-family: ui-monospace, Menlo, monospace; color: var(--dempet); }
+  .alarm.kritisk .merke { color: var(--rød); } .alarm.høy .merke { color: var(--oransje); } .alarm.advarsel .merke { color: var(--gul); }
+  .alarm.løst { opacity: .55; } .alarm.løst .merke { color: var(--ok); }
+
+  #logger { max-height: 210px; overflow: auto; font: 11.5px/1.5 ui-monospace, Menlo, monospace; }
+  .logg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .logg.ERROR { color: #ff8a8a; } .logg.WARN { color: #ffd27a; }
+  .logg .tj { color: var(--lilla); }
+
+  #poeng table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  #poeng td, #poeng th { padding: 4px 6px; text-align: left; border-bottom: 1px solid #2a2336; }
+  #poeng th { color: var(--dempet); font-weight: 500; }
+  #poeng .total { font: 600 15px ui-monospace, Menlo, monospace; color: var(--oransje); }
+  #snitt { font: 600 34px/1 ui-monospace, Menlo, monospace; color: var(--oransje); }
+
+  /* Godkjenning */
+  #modal { position: fixed; inset: 0; background: #000a; display: none; align-items: center; justify-content: center; z-index: 10; backdrop-filter: blur(3px); }
+  #modal.vis { display: flex; }
+  #modal .boks { width: min(620px, 92vw); background: #1b1424; border: 2px solid var(--lilla); border-radius: 16px; padding: 22px 24px; box-shadow: 0 0 60px #a77bff55; }
+  #modal h3 { margin: 0 0 4px; color: var(--lilla); font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; }
+  #modal .handling { font: 600 22px/1.3 ui-monospace, Menlo, monospace; margin: 6px 0 12px; }
+  #modal .grunn { color: var(--tekst); background: #120f19; border-radius: 10px; padding: 10px 12px; }
+  #modal .knapper { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+  #modal .knapper button { padding: 10px 18px; font-size: 15px; }
+  .godkjenn { background: var(--ok); color: #05210f; border-color: var(--ok); font-weight: 700; }
+  .avvis { background: transparent; color: var(--rød); border-color: var(--rød); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎃 Natte<span>skiftet</span></h1>
+  <div><div class="klokke" id="klokke">--:--</div><div class="fart" id="fart"></div></div>
+  <div class="vekst"></div>
+  <label class="bryter"><input type="checkbox" id="b-agent"> Agent på vakt</label>
+  <label class="bryter"><input type="checkbox" id="b-auto"> Godkjenn tiltak automatisk</label>
+  <label class="bryter"><input type="checkbox" id="b-dommer"> Dommer</label>
+  <select id="scenario" title="Spilleder: start en feil"></select>
+  <button class="hoved" id="start">💀 Slipp løs</button>
+</header>
+
+<main>
+  <div class="venstre">
+    <div class="panel" id="kart"><h2>Tjenestekart</h2><svg viewBox="0 0 820 300" id="kartsvg"></svg></div>
+    <div class="panel"><h2>Siste 30 minutter</h2><div id="kort"></div></div>
+    <div class="panel"><h2>Poengtavle <span id="antallpoeng"></span></h2>
+      <div style="display:flex; gap:18px; align-items:center;">
+        <div><div id="snitt">–</div><div class="fart">snitt av 16</div></div>
+        <div id="poeng" style="flex:1"><div class="tom">Ingen hendelser vurdert ennå.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="høyre">
+    <div class="panel"><h2>Agenten</h2><div id="agent"><div class="tom">Venter på første alarm. Natta er stille… foreløpig.</div></div></div>
+    <div class="panel"><h2>Alarmer</h2><div id="alarmer"><div class="tom">Ingen alarmer.</div></div></div>
+    <div class="panel"><h2>Logg (WARN og ERROR)</h2><div id="logger"></div></div>
+  </div>
+</main>
+
+<div id="modal"><div class="boks">
+  <h3>⚠️ Agenten ber om godkjenning</h3>
+  <div class="handling" id="m-handling"></div>
+  <div class="grunn" id="m-grunn"></div>
+  <div class="knapper"><button class="avvis" id="m-avvis">Avvis</button><button class="godkjenn" id="m-godkjenn">Godkjenn</button></div>
+</div></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const kl = (iso) => iso?.slice(11, 16) ?? '';
+
+// --- Kartet ---------------------------------------------------------------------
+const NODER = {
+  'api-gateway': [90, 150], innlogging: [330, 45], betaling: [330, 118], sok: [330, 191], varsling: [330, 264],
+  'kunde-db': [600, 80], Kortnett: [600, 160, true], SmsBud: [600, 264, true],
+};
+const KANTER = [['api-gateway', 'innlogging'], ['api-gateway', 'betaling'], ['api-gateway', 'sok'], ['api-gateway', 'varsling'],
+  ['innlogging', 'kunde-db'], ['betaling', 'kunde-db'], ['betaling', 'Kortnett'], ['varsling', 'SmsBud'], ['innlogging', 'varsling']];
+const B = 150, H = 48;
+
+function tegnKart() {
+  let svg = '';
+  for (const [fra, til] of KANTER) {
+    const [x1, y1] = NODER[fra], [x2, y2] = NODER[til];
+    const d = fra === 'innlogging' && til === 'varsling'
+      ? `M ${x1 + B / 2} ${y1} C ${x1 + B / 2 + 60} ${y1}, ${x2 + B / 2 + 60} ${y2}, ${x2 + B / 2} ${y2}`
+      : `M ${x1 + B / 2} ${y1} C ${(x1 + x2) / 2 + 20} ${y1}, ${(x1 + x2) / 2 - 20} ${y2}, ${x2 - B / 2} ${y2}`;
+    svg += `<path class="kant" id="k-${fra}-${til}" d="${d}"/>`;
+  }
+  for (const [navn, [x, y, ekstern]] of Object.entries(NODER)) {
+    svg += `<g class="node${ekstern ? ' ekstern' : ' ok'}" id="n-${navn}"><rect x="${x - B / 2}" y="${y - H / 2}" width="${B}" height="${H}"/>` +
+      `<text x="${x}" y="${y - 3}">${navn}${ekstern ? ' (ekstern)' : ''}</text><text class="under" x="${x}" y="${y + 14}" id="u-${navn}"></text></g>`;
+  }
+  $('kartsvg').innerHTML = svg;
+}
+
+// --- Metrikker og status ------------------------------------------------------------
+const TJENESTER = ['api-gateway', 'innlogging', 'betaling', 'sok', 'varsling', 'kunde-db'];
+const serie = Object.fromEntries(TJENESTER.map((t) => [t, []]));
+const P95_TERSKEL = { sok: 2000, betaling: 4000 };
+
+function status(m) {
+  if (!m) return 'ok';
+  if (m.tjeneste === 'kunde-db') return m.tilkoblinger > 180 ? 'rød' : m.tilkoblinger > 120 ? 'gul' : 'ok';
+  const terskel = P95_TERSKEL[m.tjeneste] ?? 3000;
+  let s = m.feilrate_5xx_pst > 5 || m.p95_ms > terskel * 2 ? 'rød' : m.feilrate_5xx_pst > 1.5 || m.p95_ms > terskel ? 'gul' : 'ok';
+  if (m.tjeneste === 'varsling' && m.sms_sendt) {
+    const levert = m.sms_levert / m.sms_sendt;
+    if (levert < 0.8) s = 'rød'; else if (levert < 0.95 && s === 'ok') s = 'gul';
+  }
+  if (m.tjeneste === 'innlogging' && Object.values(m.disk_pst ?? {}).some((p) => p > 90) && s === 'ok') s = 'gul';
+  return s;
+}
+
+function hovedtall(m) {
+  if (!m) return ['', 0];
+  if (m.tjeneste === 'kunde-db') return [`${m.tilkoblinger}/200 tilk.`, m.tilkoblinger];
+  if (m.tjeneste === 'varsling') {
+    const levert = m.sms_sendt ? Math.round((100 * m.sms_levert) / m.sms_sendt) : 100;
+    return [`sms ${levert} % · kø ${m.kø_sms}`, 100 - levert];
+  }
+  if (m.tjeneste === 'sok' || (m.p95_ms > 3000 && m.feilrate_5xx_pst < 2)) return [`p95 ${(m.p95_ms / 1000).toFixed(1)} s`, m.p95_ms / 1000];
+  return [`5xx ${m.feilrate_5xx_pst} %`, m.feilrate_5xx_pst];
+}
+
+function sparkline(verdier, farge) {
+  if (verdier.length < 2) return '';
+  const maks = Math.max(...verdier, 1e-9), b = 200, h = 34;
+  const punkter = verdier.map((v, i) => `${(i / (verdier.length - 1)) * b},${h - 3 - (v / maks) * (h - 6)}`).join(' ');
+  return `<svg viewBox="0 0 ${b} ${h}" preserveAspectRatio="none"><polyline points="${punkter}" fill="none" stroke="${farge}" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
+const FARGE = { ok: '#3ddc97', gul: '#ffb020', rød: '#ff4d4d' };
+let aktiveAlarmer = new Map();
+
+function oppdaterTjenester() {
+  let kort = '';
+  const st = {};
+  for (const tj of TJENESTER) {
+    const siste = serie[tj].at(-1);
+    st[tj] = status(siste);
+    if ([...aktiveAlarmer.values()].some((a) => a.tjeneste === tj) && st[tj] === 'ok') st[tj] = 'gul';
+    const [tekst] = hovedtall(siste);
+    const node = $(`n-${tj}`);
+    node.setAttribute('class', `node ${st[tj]}`);
+    $(`u-${tj}`).textContent = tekst;
+    const verdier = serie[tj].slice(-30).map((m) => hovedtall(m)[1]);
+    kort += `<div class="kort ${st[tj]}"><div class="navn"><span>${tj}</span><span>${siste ? `${siste.rps ?? ''}${siste.rps !== undefined ? ' rps' : ''}` : ''}</span></div>` +
+      `<div class="verdi">${tekst || '–'}</div>${sparkline(verdier, FARGE[st[tj]])}</div>`;
+  }
+  $('kort').innerHTML = kort;
+  for (const [fra, til] of KANTER) {
+    const s = st[til] ?? 'ok';
+    $(`k-${fra}-${til}`).setAttribute('class', `kant ${s === 'ok' ? '' : s}`);
+  }
+}
+
+function nyMetrikk(m) {
+  const s = serie[m.tjeneste];
+  if (!s) return;
+  s.push(m);
+  if (s.length > 45) s.shift();
+}
+
+// --- Alarmer og logger ----------------------------------------------------------------
+function nyAlarm(a) {
+  if (a.status === 'løst') aktiveAlarmer.delete(a.id); else aktiveAlarmer.set(a.id, a);
+  const liste = $('alarmer');
+  liste.querySelector('.tom')?.remove();
+  const el = document.createElement('div');
+  el.className = `alarm ${a.status === 'løst' ? 'løst' : a.alvorlighet}`;
+  el.innerHTML = `<span class="tid">${kl(a.tid)}</span> <span class="merke">${a.status === 'løst' ? '✓ løst' : '● ' + a.alvorlighet}</span> <b>${esc(a.id)}</b> ${esc(a.status === 'løst' ? a.tittel : a.tekst)}`;
+  liste.prepend(el);
+}
+
+function nyLogg(l) {
+  const liste = $('logger');
+  const el = document.createElement('div');
+  el.className = `logg ${l.nivå}`;
+  el.title = l.melding;
+  el.innerHTML = `${kl(l.tid)} <span class="tj">${esc(l.vert ?? l.tjeneste)}</span> ${esc(l.melding)}`;
+  liste.prepend(el);
+  while (liste.children.length > 60) liste.lastChild.remove();
+}
+
+// --- Agenten --------------------------------------------------------------------------------
+function markdown(md) {
+  const linjer = esc(md).split('\n');
+  let html = '', liste = null;
+  const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const lukk = () => { if (liste) { html += `</${liste}>`; liste = null; } };
+  for (const l of linjer) {
+    let m;
+    if ((m = l.match(/^#{1,4}\s+(.*)/))) { lukk(); html += `<h3>${inline(m[1])}</h3>`; }
+    else if ((m = l.match(/^\s*[-*]\s+(.*)/))) { if (liste !== 'ul') { lukk(); html += '<ul>'; liste = 'ul'; } html += `<li>${inline(m[1])}</li>`; }
+    else if ((m = l.match(/^\s*\d+\.\s+(.*)/))) { if (liste !== 'ol') { lukk(); html += '<ol>'; liste = 'ol'; } html += `<li>${inline(m[1])}</li>`; }
+    else if (l.trim()) { lukk(); html += `<p>${inline(l)}</p>`; }
+    else lukk();
+  }
+  lukk();
+  return html;
+}
+
+let jobber = false;
+function agentHendelse(h) {
+  const boks = $('agent');
+  boks.querySelector('.tom')?.remove();
+  boks.querySelector('.tenker')?.remove();
+  const el = document.createElement('div');
+  el.className = 'hendelse';
+  switch (h.type) {
+    case 'start':
+      jobber = true;
+      el.className += ' start';
+      el.innerHTML = `🚨 <b>${esc(h.alarm.id)}</b> ${esc(h.alarm.tekst)}`;
+      break;
+    case 'tanke': el.className += ' tanke'; el.textContent = h.tekst; break;
+    case 'verktøy': {
+      const tiltak = h.navn === 'utfor_tiltak';
+      el.className += ` verktøy${tiltak ? ' tiltak' : ''}`;
+      const input = Object.entries(h.input ?? {}).filter(([k]) => k !== 'begrunnelse').map(([k, v]) => `${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`).join(' ');
+      el.innerHTML = `${tiltak ? '🛠️' : '→'} <b>${esc(h.navn)}</b> ${esc(input)}`;
+      break;
+    }
+    case 'resultat':
+      el.className += ` resultat${h.feil ? ' feil' : ''}`;
+      el.textContent = h.navn === 'utfor_tiltak' ? `↳ ${h.utdrag}` : `${h.feil ? '✖' : '✓'} ${h.tegn} tegn`;
+      break;
+    case 'rapport': el.className += ' rapport'; el.innerHTML = markdown(h.tekst); break;
+    case 'avsluttet':
+      jobber = false;
+      el.className += ' tanke';
+      el.textContent = `Ferdig etter ${h.verktøykall} verktøykall.${h.sammeHendelse?.length ? ` Samme hendelse: ${h.sammeHendelse.join(', ')}.` : ''}`;
+      break;
+    case 'feil': jobber = false; el.className += ' feilmelding'; el.textContent = `✖ ${h.tekst}`; break;
+    default: return;
+  }
+  boks.appendChild(el);
+  if (jobber) { const t = document.createElement('div'); t.className = 'tenker'; t.textContent = '🎃 graver'; boks.appendChild(t); }
+  while (boks.children.length > 160) boks.firstChild.remove();
+  boks.scrollTop = boks.scrollHeight;
+}
+
+// --- Poeng -----------------------------------------------------------------------------------
+const poeng = [];
+function nyePoeng(p) {
+  if (!p) return;
+  poeng.push(p);
+  const snitt = poeng.reduce((s, x) => s + x.totalt, 0) / poeng.length;
+  $('snitt').textContent = snitt.toFixed(1);
+  $('antallpoeng').textContent = `· ${poeng.length} hendelser`;
+  $('poeng').innerHTML = `<table><tr><th>Alarm</th><th>Rotårsak</th><th>Felle</th><th>Ærlig</th><th>Eskal.</th><th>Tiltak</th><th>Fart</th><th>Sum</th></tr>` +
+    poeng.slice(-6).reverse().map((x) => `<tr title="${esc(x.begrunnelse)}"><td>${esc(x.alarm)} <span class="fart">${esc(x.tjeneste)}</span></td>` +
+      `<td>${x.rotårsak}/4</td><td>${x.felle}/2</td><td>${x.ærlighet}/2</td><td>${x.eskalering}/2</td><td>${x.tiltak > 0 ? '+' : ''}${x.tiltak}</td><td>${x.fart}/3</td>` +
+      `<td class="total">${x.totalt}</td></tr>`).join('') + '</table>';
+}
+
+// --- Godkjenning ---------------------------------------------------------------------------
+let godkjenning = null;
+function visGodkjenning(g) {
+  godkjenning = g;
+  $('modal').classList.toggle('vis', !!g);
+  if (!g) return;
+  $('m-handling').textContent = `${g.handling} ${g.tjeneste}${g.parameter ? ` (${g.parameter})` : ''}`;
+  $('m-grunn').textContent = g.begrunnelse;
+}
+async function svar(godkjent) {
+  if (!godkjenning) return;
+  await fetch('/godkjenn', { method: 'POST', body: JSON.stringify({ id: godkjenning.id, godkjent }) });
+  visGodkjenning(null);
+}
+$('m-godkjenn').onclick = () => svar(true);
+$('m-avvis').onclick = () => svar(false);
+document.addEventListener('keydown', (e) => { if (godkjenning && e.key === 'j') svar(true); if (godkjenning && e.key === 'n') svar(false); });
+
+// --- Kontroller ------------------------------------------------------------------------------
+let scenarierSatt = false;
+function nyMeta(m) {
+  $('klokke').textContent = kl(m.nå);
+  $('fart').textContent = `${m.fart}x fart · agent ${m.runder}/${m.maks} runder${m.harNøkkel ? '' : ' · ingen API-nøkkel'}`;
+  for (const [id, nøkkel] of [['b-agent', 'agent'], ['b-auto', 'autoGodkjenn'], ['b-dommer', 'dommer']]) {
+    if (document.activeElement !== $(id)) $(id).checked = m.innstillinger[nøkkel];
+  }
+  if (!scenarierSatt && m.scenarier) {
+    $('scenario').innerHTML = m.scenarier.map((s) => `<option>${esc(s)}</option>`).join('');
+    scenarierSatt = true;
+  }
+}
+for (const [id, nøkkel] of [['b-agent', 'agent'], ['b-auto', 'autoGodkjenn'], ['b-dommer', 'dommer']]) {
+  $(id).onchange = (e) => fetch('/innstillinger', { method: 'POST', body: JSON.stringify({ [nøkkel]: e.target.checked }) });
+}
+$('start').onclick = () => fetch('/scenario', { method: 'POST', body: JSON.stringify({ navn: $('scenario').value }) });
+
+// --- Strømmen fra serveren ------------------------------------------------------------------
+tegnKart();
+const kilde = new EventSource('/hendelser');
+kilde.addEventListener('tilstand', (e) => {
+  const t = JSON.parse(e.data);
+  for (const tj of TJENESTER) serie[tj].length = 0;
+  t.metrikker.forEach(nyMetrikk);
+  $('alarmer').innerHTML = ''; aktiveAlarmer = new Map(); t.alarmer.forEach(nyAlarm);
+  if (!t.alarmer.length) $('alarmer').innerHTML = '<div class="tom">Ingen alarmer.</div>';
+  $('logger').innerHTML = ''; t.logger.forEach(nyLogg);
+  if (t.agent.length) { $('agent').innerHTML = ''; t.agent.forEach(agentHendelse); }
+  poeng.length = 0; t.poeng.forEach(nyePoeng);
+  visGodkjenning(t.godkjenning);
+  oppdaterTjenester();
+});
+kilde.addEventListener('metrikk', (e) => { nyMetrikk(JSON.parse(e.data)); oppdaterTjenester(); });
+kilde.addEventListener('alarm', (e) => { nyAlarm(JSON.parse(e.data)); oppdaterTjenester(); });
+kilde.addEventListener('logg', (e) => nyLogg(JSON.parse(e.data)));
+kilde.addEventListener('agent', (e) => agentHendelse(JSON.parse(e.data)));
+kilde.addEventListener('poeng', (e) => nyePoeng(JSON.parse(e.data)));
+kilde.addEventListener('godkjenning', (e) => visGodkjenning(JSON.parse(e.data)));
+kilde.addEventListener('meta', (e) => nyMeta(JSON.parse(e.data)));
+</script>
+</body>
+</html>
