@@ -36,7 +36,7 @@ const innstillinger = {
 let runder = 0;
 
 // Det nettleseren trenger for å tegne alt på nytt etter en refresh.
-const tilstand = { metrikker: [], alarmer: [], logger: [], agent: [], poeng: [], meta: null, godkjenning: null };
+const tilstand = { metrikker: [], alarmer: [], logger: [], agent: [], poeng: [], meta: null, godkjenning: null, spill: null };
 const klienter = new Set();
 
 function send(type, data) {
@@ -122,7 +122,8 @@ settGodkjenner(async (forslag) => {
 
 // --- Agenten på vakt ------------------------------------------------------------
 
-function agentHendelse(h) {
+function agentHendelse(hendelse) {
+  const h = { ...hendelse, ts: Date.now() };
   husk(tilstand.agent, h, 300);
   send('agent', h);
 }
@@ -141,7 +142,7 @@ async function vakt() {
       if (innstillinger.dommer) {
         const poeng = await vurderRapport(MAPPE, alarm.id, { startet });
         husk(tilstand.poeng, poeng, 50);
-        send('poeng', poeng);
+        if (poeng) send('poeng', { ...poeng, ts: Date.now() });
       }
     } catch (e) {
       console.error(e);
@@ -186,6 +187,8 @@ http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && req.url === '/scenario') {
       const { navn } = await lesBody(req);
+      tilstand.spill = { navn, ts: Date.now() };
+      send('spill', tilstand.spill);
       const id = Math.random().toString(36).slice(2, 10);
       fs.appendFileSync(path.join(MAPPE, 'kommandoer.jsonl'), JSON.stringify({ id, handling: 'start_scenario', parameter: navn }) + '\n');
       return res.end('ok');

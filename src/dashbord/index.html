@@ -100,6 +100,48 @@
   #modal .knapper button { padding: 10px 18px; font-size: 15px; }
   .godkjenn { background: var(--ok); color: #05210f; border-color: var(--ok); font-weight: 700; }
   .avvis { background: transparent; color: var(--rød); border-color: var(--rød); }
+
+  /* Fortellingen: hva skjer akkurat nå */
+  #fortelling { margin: 14px 20px 0; padding: 14px 20px; border-radius: 14px; border: 1px solid var(--kant); background: #15111c;
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 24px; align-items: center; transition: border-color .4s, background .4s; }
+  #fortelling .overskrift { font-size: 24px; font-weight: 650; }
+  #fortelling .detalj { color: #cfc6dc; font-size: 15px; min-height: 1.5em; }
+  #fortelling .tidtaker { grid-row: 1 / span 2; grid-column: 2; text-align: right; font: 600 42px/1 ui-monospace, Menlo, monospace; color: var(--dempet); }
+  #fortelling .tidtaker small { display: block; font: 400 11px ui-sans-serif, system-ui; letter-spacing: .5px; margin-top: 4px; }
+  #fortelling.alarm { border-color: var(--rød); background: #241014; } #fortelling.alarm .tidtaker { color: var(--rød); }
+  #fortelling.undersøker { border-color: var(--oransje); background: #21160d; } #fortelling.undersøker .tidtaker { color: var(--oransje); }
+  #fortelling.godkjenning { border-color: var(--lilla); background: #1e1530; } #fortelling.godkjenning .tidtaker { color: var(--lilla); }
+  #fortelling.løst { border-color: var(--ok); background: #0f2219; } #fortelling.løst .tidtaker { color: var(--ok); }
+  .steg { grid-column: 1 / span 2; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .steg span { padding: 3px 11px; border-radius: 999px; border: 1px solid var(--kant); color: var(--dempet); font-size: 12.5px; }
+  .steg span small { opacity: .8; margin-left: 5px; font-family: ui-monospace, Menlo, monospace; }
+  .steg span.ferdig { border-color: var(--ok); color: var(--ok); }
+  .steg span.aktiv { border-color: var(--oransje); color: var(--oransje); background: #2b1a0c; animation: blink 1.4s infinite; }
+  .steg span.hoppet { text-decoration: line-through; opacity: .4; }
+  @keyframes blink { 50% { opacity: .55; } }
+
+  /* Kartet: der agenten ser, og alarmer */
+  .node.fokus rect { stroke: var(--lilla) !important; stroke-width: 3.5; filter: drop-shadow(0 0 12px #a77bffcc); }
+  .node .fokus-tekst { display: none; fill: var(--lilla); font-size: 11.5px; font-weight: 600; }
+  .node.fokus .fokus-tekst { display: block; }
+  .node.tiltak rect { stroke: var(--lilla) !important; stroke-width: 4; fill: #241a38 !important; }
+  .node .merke-alarm { font-size: 15px; text-anchor: middle; }
+
+  /* Agenten, mer lesbar */
+  #agent .tanke { color: var(--tekst); font-style: normal; border-left: 3px solid var(--lilla); padding: 4px 10px; margin: 4px 0; background: #1a1424; border-radius: 0 6px 6px 0; }
+  #agent .verktøy { font-family: inherit; font-size: 13px; }
+  #agent .resultat { font-family: inherit; font-size: 12px; color: var(--dempet); }
+  #agent .resultat.feil { color: var(--rød); }
+  #agent .kort-fortalt { font-size: 16px; font-weight: 650; color: var(--ok); margin-bottom: 6px; }
+  #agent .notat { color: var(--dempet); font-size: 12.5px; }
+
+  /* Logger, gruppert */
+  .logg { display: flex; gap: 8px; align-items: baseline; }
+  .logg .tid { color: var(--dempet); flex: none; }
+  .logg .chip { flex: none; padding: 0 6px; border-radius: 5px; font-size: 10.5px; color: #0d0b12; background: var(--c); font-weight: 600; }
+  .logg .tekst { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .logg .antall { flex: none; color: var(--tekst); background: #2a2336; border-radius: 999px; padding: 0 7px; font-size: 10.5px; }
+  .logg.ny { animation: ny 1.2s; } @keyframes ny { from { background: #3a2a10; } }
 </style>
 </head>
 <body>
@@ -114,6 +156,13 @@
   <button class="hoved" id="start">💀 Slipp løs</button>
 </header>
 
+<section id="fortelling">
+  <div class="overskrift" id="f-overskrift">🌙 Alt er rolig</div>
+  <div class="tidtaker" id="f-tid">0:00<small id="f-tidtekst">&nbsp;</small></div>
+  <div class="detalj" id="f-detalj">Natta går sin gang. Trykk 💀 Slipp løs for å starte en feil.</div>
+  <div class="steg" id="f-steg"></div>
+</section>
+
 <main>
   <div class="venstre">
     <div class="panel" id="kart"><h2>Tjenestekart</h2><svg viewBox="0 0 820 300" id="kartsvg"></svg></div>
@@ -126,9 +175,9 @@
     </div>
   </div>
   <div class="høyre">
-    <div class="panel"><h2>Agenten</h2><div id="agent"><div class="tom">Venter på første alarm. Natta er stille… foreløpig.</div></div></div>
+    <div class="panel"><h2>Agenten · hva den gjør, steg for steg</h2><div id="agent"><div class="tom">Venter på første alarm. Natta er stille… foreløpig.</div></div></div>
     <div class="panel"><h2>Alarmer</h2><div id="alarmer"><div class="tom">Ingen alarmer.</div></div></div>
-    <div class="panel"><h2>Logg (WARN og ERROR)</h2><div id="logger"></div></div>
+    <div class="panel"><h2>Logger · feil og advarsler, like linjer slått sammen</h2><div id="logger"></div></div>
   </div>
 </main>
 
@@ -164,7 +213,9 @@ function tegnKart() {
   }
   for (const [navn, [x, y, ekstern]] of Object.entries(NODER)) {
     svg += `<g class="node${ekstern ? ' ekstern' : ' ok'}" id="n-${navn}"><rect x="${x - B / 2}" y="${y - H / 2}" width="${B}" height="${H}"/>` +
-      `<text x="${x}" y="${y - 3}">${navn}${ekstern ? ' (ekstern)' : ''}</text><text class="under" x="${x}" y="${y + 14}" id="u-${navn}"></text></g>`;
+      `<text x="${x}" y="${y - 3}">${navn}${ekstern ? ' (ekstern)' : ''}</text><text class="under" x="${x}" y="${y + 14}" id="u-${navn}"></text>` +
+      `<text class="merke-alarm" x="${x + B / 2 - 4}" y="${y - H / 2 + 6}" id="a-${navn}"></text>` +
+      `<text class="fokus-tekst" x="${x}" y="${y - H / 2 - 7}" text-anchor="middle">🔍 agenten ser her</text></g>`;
   }
   $('kartsvg').innerHTML = svg;
 }
@@ -207,6 +258,9 @@ function sparkline(verdier, farge) {
 
 const FARGE = { ok: '#3ddc97', gul: '#ffb020', rød: '#ff4d4d' };
 let aktiveAlarmer = new Map();
+const fokus = new Map();    // tjeneste -> til når agenten «ser» på den
+const tiltakPå = new Map(); // tjeneste -> til når et tiltak vises på noden
+setInterval(() => oppdaterTjenester(), 1000);
 
 function oppdaterTjenester() {
   let kort = '';
@@ -217,7 +271,10 @@ function oppdaterTjenester() {
     if ([...aktiveAlarmer.values()].some((a) => a.tjeneste === tj) && st[tj] === 'ok') st[tj] = 'gul';
     const [tekst] = hovedtall(siste);
     const node = $(`n-${tj}`);
-    node.setAttribute('class', `node ${st[tj]}`);
+    const iFokus = (fokus.get(tj) ?? 0) > Date.now();
+    node.setAttribute('class', `node ${st[tj]}${iFokus ? ' fokus' : ''}${(tiltakPå.get(tj) ?? 0) > Date.now() ? ' tiltak' : ''}`);
+    const alarmer = [...aktiveAlarmer.values()].filter((a) => a.tjeneste === tj).length;
+    $(`a-${tj}`).textContent = alarmer ? '🚨' : '';
     $(`u-${tj}`).textContent = tekst;
     const verdier = serie[tj].slice(-30).map((m) => hovedtall(m)[1]);
     kort += `<div class="kort ${st[tj]}"><div class="navn"><span>${tj}</span><span>${siste ? `${siste.rps ?? ''}${siste.rps !== undefined ? ' rps' : ''}` : ''}</span></div>` +
@@ -240,6 +297,12 @@ function nyMetrikk(m) {
 // --- Alarmer og logger ----------------------------------------------------------------
 function nyAlarm(a) {
   if (a.status === 'løst') aktiveAlarmer.delete(a.id); else aktiveAlarmer.set(a.id, a);
+  if (a.status !== 'løst') {
+    if (!historie.t0 || historie.steg.rapport) nyHistorie(Date.now());
+    if (!historie.steg.alarm) fortell('alarm', `🚨 ${a.tjeneste}: ${a.tittel}`, a.tekst);
+  } else if (historie.steg.rapport && aktiveAlarmer.size === 0) {
+    $('f-detalj').textContent += ' Alle alarmer er løst.';
+  }
   const liste = $('alarmer');
   liste.querySelector('.tom')?.remove();
   const el = document.createElement('div');
@@ -248,14 +311,30 @@ function nyAlarm(a) {
   liste.prepend(el);
 }
 
+const TJENESTEFARGE = { 'api-gateway': '#7cc4ff', innlogging: '#ffd166', betaling: '#ff8fab', sok: '#9be564', varsling: '#c9a7ff', 'kunde-db': '#ff9f5a' };
+const grupper = new Map();
+// Samme melding med andre tall (pid, trace, ms) regnes som samme linje.
+const loggnøkkel = (l) => `${l.tjeneste}|${l.nivå}|${l.melding.replace(/trace=\w+/g, '').replace(/\b[0-9a-f]{8,}\b/g, '#').replace(/\d+([.,]\d+)?/g, '#')}`;
+
 function nyLogg(l) {
   const liste = $('logger');
-  const el = document.createElement('div');
-  el.className = `logg ${l.nivå}`;
-  el.title = l.melding;
-  el.innerHTML = `${kl(l.tid)} <span class="tj">${esc(l.vert ?? l.tjeneste)}</span> ${esc(l.melding)}`;
-  liste.prepend(el);
-  while (liste.children.length > 60) liste.lastChild.remove();
+  const k = loggnøkkel(l);
+  let g = grupper.get(k);
+  if (!g) {
+    g = { antall: 0, el: document.createElement('div') };
+    g.el.dataset.k = k;
+    grupper.set(k, g);
+  }
+  g.antall++;
+  g.el.className = `logg ${l.nivå} ny`;
+  g.el.title = l.melding;
+  g.el.innerHTML = `<span class="tid">${kl(l.tid)}</span><span class="chip" style="--c:${TJENESTEFARGE[l.tjeneste] ?? '#888'}">${esc(l.tjeneste)}</span>` +
+    `<span class="tekst">${esc(l.melding)}</span>${g.antall > 1 ? `<span class="antall">×${g.antall}</span>` : ''}`;
+  liste.prepend(g.el);
+  while (liste.children.length > 40) {
+    grupper.delete(liste.lastChild.dataset.k);
+    liste.lastChild.remove();
+  }
 }
 
 // --- Agenten --------------------------------------------------------------------------------
@@ -276,36 +355,88 @@ function markdown(md) {
   return html;
 }
 
+// Verktøykall på vanlig norsk, for publikum.
+function beskriv(navn, i = {}) {
+  const tj = i.tjeneste;
+  switch (navn) {
+    case 'sok_i_logger':
+      return `🔍 Leser logger${tj ? ` fra <b>${esc(tj)}</b>` : ' fra alle tjenester'}${i.niva ? ` (bare ${esc(i.niva)})` : ''}${i.tekst ? ` som nevner «${esc(i.tekst)}»` : ''}${i.fra ? ` fra kl ${esc(kl(i.fra) || i.fra)}` : ''}`;
+    case 'hent_runbook': return `📖 Slår opp runbooken for <b>${esc(tj)}</b>`;
+    case 'sjekk_deploy_historikk': return `📦 Sjekker hva som er endret${tj ? ` i <b>${esc(tj)}</b>` : ' nylig'}`;
+    case 'finn_lignende_hendelser': return `🗂️ Leter etter lignende hendelser${tj ? ` i <b>${esc(tj)}</b>` : ''}${i.tekst ? ` («${esc(i.tekst)}»)` : ''}`;
+    case 'hent_tjenesteinfo': return `🧭 Sjekker avhengigheter og vaktliste for <b>${esc(tj ?? 'alle tjenester')}</b>`;
+    case 'hent_metrikker': return `📈 Ser på målinger${tj ? ` for <b>${esc(tj)}</b>` : ' for alle tjenester'}`;
+    case 'hent_alarmer': return '🚨 Sjekker hvilke andre alarmer som har gått';
+    case 'utfor_tiltak': return `🛠️ Vil gjøre: <b>${esc(i.handling)}</b> på <b>${esc(tj)}</b>${i.parameter ? ` (${esc(i.parameter)})` : ''}`;
+    default: return `→ ${esc(navn)}`;
+  }
+}
+
+// Den mest talende linja i et verktøysvar.
+function kjernelinje(utdrag = '') {
+  const linjer = utdrag.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('...') && !l.startsWith('# '));
+  const linje = linjer.find((l) => l.startsWith('Sist oppdatert')) ?? linjer[0] ?? '';
+  return linje.length > 120 ? linje.slice(0, 117) + '…' : linje;
+}
+
+const kortFortalt = (tekst) => tekst.match(/Kort fortalt:\s*\**\s*(.+)/i)?.[1].replace(/\*\*/g, '').trim();
+
 let jobber = false;
+let sisteTanke = 0;
 function agentHendelse(h) {
   const boks = $('agent');
   boks.querySelector('.tom')?.remove();
   boks.querySelector('.tenker')?.remove();
   const el = document.createElement('div');
   el.className = 'hendelse';
+  const ts = h.ts ?? Date.now();
   switch (h.type) {
     case 'start':
       jobber = true;
       el.className += ' start';
       el.innerHTML = `🚨 <b>${esc(h.alarm.id)}</b> ${esc(h.alarm.tekst)}`;
+      fortell('undersøker', '🔎 Agenten undersøker', 'Leser alarmen og legger en plan…', ts);
       break;
-    case 'tanke': el.className += ' tanke'; el.textContent = h.tekst; break;
+    case 'tanke':
+      el.className += ' tanke';
+      el.textContent = `💭 ${h.tekst}`;
+      sisteTanke = ts;
+      if (['undersøker', 'tiltak'].includes(historie.fase)) fortell(historie.fase, null, `💭 ${h.tekst}`, ts);
+      break;
     case 'verktøy': {
-      const tiltak = h.navn === 'utfor_tiltak';
-      el.className += ` verktøy${tiltak ? ' tiltak' : ''}`;
-      const input = Object.entries(h.input ?? {}).filter(([k]) => k !== 'begrunnelse').map(([k, v]) => `${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`).join(' ');
-      el.innerHTML = `${tiltak ? '🛠️' : '→'} <b>${esc(h.navn)}</b> ${esc(input)}`;
+      el.className += ` verktøy${h.navn === 'utfor_tiltak' ? ' tiltak' : ''}`;
+      el.innerHTML = beskriv(h.navn, h.input);
+      const tj = h.input?.tjeneste;
+      if (tj) fokus.set(tj, Date.now() + 5000);
+      if (tj && h.navn === 'utfor_tiltak') tiltakPå.set(tj, Date.now() + 12000);
+      if (historie.fase === 'undersøker' && ts - sisteTanke > 4000) fortell('undersøker', null, el.textContent, ts);
       break;
     }
-    case 'resultat':
+    case 'resultat': {
       el.className += ` resultat${h.feil ? ' feil' : ''}`;
-      el.textContent = h.navn === 'utfor_tiltak' ? `↳ ${h.utdrag}` : `${h.feil ? '✖' : '✓'} ${h.tegn} tegn`;
+      if (h.navn === 'utfor_tiltak') {
+        el.textContent = `↳ ${h.utdrag.split('\n')[0]}`;
+        const avvist = h.utdrag.startsWith('Tiltaket ble IKKE');
+        fortell('tiltak', avvist ? '🙅 Tiltaket ble avvist' : '🛠️ Tiltak utført, venter på at systemet tar seg inn', h.utdrag.split('\n')[0], ts);
+      } else {
+        const linje = kjernelinje(h.utdrag);
+        el.textContent = `↳ ${h.feil ? '✖ ' : ''}${linje}${h.linjer > 1 ? `  · ${h.linjer} linjer` : ''}`;
+      }
       break;
-    case 'rapport': el.className += ' rapport'; el.innerHTML = markdown(h.tekst); break;
+    }
+    case 'rapport': {
+      el.className += ' rapport';
+      const kort = kortFortalt(h.tekst);
+      if (kort) historie.kort = kort;
+      el.innerHTML = (kort ? `<div class="kort-fortalt">✅ ${esc(kort)}</div>` : '') + markdown(h.tekst.replace(/^.*Kort fortalt:.*$/im, ''));
+      break;
+    }
     case 'avsluttet':
       jobber = false;
-      el.className += ' tanke';
-      el.textContent = `Ferdig etter ${h.verktøykall} verktøykall.${h.sammeHendelse?.length ? ` Samme hendelse: ${h.sammeHendelse.join(', ')}.` : ''}`;
+      el.className += ' notat';
+      el.textContent = `Ferdig etter ${h.verktøykall} steg.${h.sammeHendelse?.length ? ` Alarmene ${h.sammeHendelse.join(', ')} hørte til samme hendelse.` : ''}`;
+      historie.slutt = ts;
+      fortell('rapport', `✅ ${historie.kort ?? 'Rapporten er klar'}`, `Agenten brukte ${h.verktøykall} steg. ${innstillingerNå.dommer ? 'Dommeren vurderer…' : ''}`, ts);
       break;
     case 'feil': jobber = false; el.className += ' feilmelding'; el.textContent = `✖ ${h.tekst}`; break;
     default: return;
@@ -316,11 +447,48 @@ function agentHendelse(h) {
   boks.scrollTop = boks.scrollHeight;
 }
 
+// --- Fortellingen: hva skjer nå, og hvor lenge har det gått ------------------------------
+const STEG = [['alarm', '🚨 Alarm'], ['undersøker', '🔎 Undersøker'], ['godkjenning', '✋ Ber om lov'], ['tiltak', '🛠️ Tiltak'], ['rapport', '📝 Rapport'], ['poeng', '🏆 Poeng']];
+const KLASSE = { alarm: 'alarm', undersøker: 'undersøker', tiltak: 'undersøker', godkjenning: 'godkjenning', rapport: 'løst', poeng: 'løst' };
+let historie = { fase: 'rolig', t0: null, slutt: null, steg: {} };
+let innstillingerNå = {};
+
+function nyHistorie(ts) {
+  historie = { fase: 'rolig', t0: ts, slutt: null, steg: {} };
+}
+
+function fortell(fase, overskrift, detalj, ts = Date.now()) {
+  if (STEG.some(([k]) => k === fase)) historie.steg[fase] ??= ts;
+  historie.fase = fase;
+  if (overskrift) $('f-overskrift').textContent = overskrift;
+  if (detalj !== undefined && detalj !== null) $('f-detalj').textContent = detalj;
+  $('fortelling').className = KLASSE[fase] ?? '';
+  tegnSteg();
+}
+
+function tegnSteg() {
+  if (!historie.t0) { $('f-steg').innerHTML = ''; return; }
+  const ferdig = !!historie.steg.rapport;
+  $('f-steg').innerHTML = STEG.map(([k, navn]) => {
+    const t = historie.steg[k];
+    const klasse = historie.fase === k && !(k === 'poeng') ? 'aktiv' : t ? 'ferdig' : ferdig && ['godkjenning', 'tiltak'].includes(k) ? 'hoppet' : '';
+    return `<span class="${klasse}">${navn}${t ? `<small>${tidstekst(t - historie.t0)}</small>` : ''}</span>`;
+  }).join('');
+}
+
+const tidstekst = (ms) => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+setInterval(() => {
+  if (!historie.t0) return;
+  $('f-tid').firstChild.textContent = tidstekst((historie.slutt ?? Date.now()) - historie.t0);
+  $('f-tidtekst').textContent = historie.slutt ? 'fra feil til rapport' : 'siden feilen startet';
+}, 250);
+
 // --- Poeng -----------------------------------------------------------------------------------
 const poeng = [];
 function nyePoeng(p) {
   if (!p) return;
   poeng.push(p);
+  if (historie.steg.rapport) fortell('poeng', null, `🏆 Dommeren: ${p.totalt} av 16. ${p.begrunnelse}`, p.ts);
   const snitt = poeng.reduce((s, x) => s + x.totalt, 0) / poeng.length;
   $('snitt').textContent = snitt.toFixed(1);
   $('antallpoeng').textContent = `· ${poeng.length} hendelser`;
@@ -336,6 +504,7 @@ function visGodkjenning(g) {
   godkjenning = g;
   $('modal').classList.toggle('vis', !!g);
   if (!g) return;
+  fortell('godkjenning', '✋ Agenten ber om lov', `Vil gjøre ${g.handling} på ${g.tjeneste}${g.parameter ? ` (${g.parameter})` : ''}. ${g.begrunnelse}`);
   $('m-handling').textContent = `${g.handling} ${g.tjeneste}${g.parameter ? ` (${g.parameter})` : ''}`;
   $('m-grunn').textContent = g.begrunnelse;
 }
@@ -356,6 +525,7 @@ function nyMeta(m) {
   for (const [id, nøkkel] of [['b-agent', 'agent'], ['b-auto', 'autoGodkjenn'], ['b-dommer', 'dommer']]) {
     if (document.activeElement !== $(id)) $(id).checked = m.innstillinger[nøkkel];
   }
+  innstillingerNå = m.innstillinger;
   if (!scenarierSatt && m.scenarier) {
     $('scenario').innerHTML = m.scenarier.map((s) => `<option>${esc(s)}</option>`).join('');
     scenarierSatt = true;
@@ -371,11 +541,12 @@ tegnKart();
 const kilde = new EventSource('/hendelser');
 kilde.addEventListener('tilstand', (e) => {
   const t = JSON.parse(e.data);
+  if (t.spill) nyHistorie(t.spill.ts);
   for (const tj of TJENESTER) serie[tj].length = 0;
   t.metrikker.forEach(nyMetrikk);
   $('alarmer').innerHTML = ''; aktiveAlarmer = new Map(); t.alarmer.forEach(nyAlarm);
   if (!t.alarmer.length) $('alarmer').innerHTML = '<div class="tom">Ingen alarmer.</div>';
-  $('logger').innerHTML = ''; t.logger.forEach(nyLogg);
+  $('logger').innerHTML = ''; grupper.clear(); t.logger.forEach(nyLogg);
   if (t.agent.length) { $('agent').innerHTML = ''; t.agent.forEach(agentHendelse); }
   poeng.length = 0; t.poeng.forEach(nyePoeng);
   visGodkjenning(t.godkjenning);
@@ -388,6 +559,10 @@ kilde.addEventListener('agent', (e) => agentHendelse(JSON.parse(e.data)));
 kilde.addEventListener('poeng', (e) => nyePoeng(JSON.parse(e.data)));
 kilde.addEventListener('godkjenning', (e) => visGodkjenning(JSON.parse(e.data)));
 kilde.addEventListener('meta', (e) => nyMeta(JSON.parse(e.data)));
+kilde.addEventListener('spill', (e) => {
+  nyHistorie(JSON.parse(e.data).ts);
+  fortell('rolig', '💀 Noe er i ferd med å gå galt…', 'Ingen vet hva ennå. Vi venter på at en alarm går.');
+});
 </script>
 </body>
 </html>

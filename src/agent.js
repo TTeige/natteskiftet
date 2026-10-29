@@ -23,9 +23,13 @@ export async function kjørAgent({ system, oppgave, verktøy, påHendelse = () =
   const messages = [{ role: 'user', content: oppgave }];
 
   for (let i = 1; i <= MAX_ITERASJONER; i++) {
-    const svar = await klient.messages.create({
+    // display: 'updates' gir de korte statuslinjene modellen skriver mellom
+    // verktøykallene (ellers kommer de tomme). Selve resonneringen forblir skjult.
+    const svar = await klient.beta.messages.create({
       model: MODELL,
       max_tokens: 16000,
+      betas: ['thinking-display-updates-2026-08-18'],
+      thinking: { type: 'adaptive', display: 'updates' },
       output_config: { effort: 'medium' },
       system,
       tools: aktive.map((v) => v.definisjon),
@@ -35,6 +39,10 @@ export async function kjørAgent({ system, oppgave, verktøy, påHendelse = () =
     messages.push({ role: 'assistant', content: svar.content });
 
     for (const blokk of svar.content) {
+      if (blokk.type === 'thinking' && blokk.thinking.trim()) {
+        console.log(grå(`💭 ${blokk.thinking}`));
+        påHendelse({ type: 'tanke', tekst: blokk.thinking });
+      }
       if (blokk.type === 'text' && blokk.text.trim()) {
         console.log(svar.stop_reason === 'tool_use' ? grå(blokk.text) : blokk.text);
         påHendelse({ type: svar.stop_reason === 'tool_use' ? 'tanke' : 'rapport', tekst: blokk.text });
@@ -62,7 +70,10 @@ export async function kjørAgent({ system, oppgave, verktøy, påHendelse = () =
       console.log(oransje(`→ ${k.name}`) + grå(` ${JSON.stringify(k.input)}`));
       påHendelse({ type: 'verktøy', navn: k.name, input: k.input });
       const resultat = await kjørVerktøy(etterNavn, k);
-      påHendelse({ type: 'resultat', navn: k.name, tegn: resultat.content.length, feil: !!resultat.is_error, utdrag: resultat.content.slice(0, 300) });
+      påHendelse({
+        type: 'resultat', navn: k.name, tegn: resultat.content.length, linjer: resultat.content.split('\n').length,
+        feil: !!resultat.is_error, utdrag: resultat.content.slice(0, 300),
+      });
       resultater.push(resultat);
     }
     messages.push({ role: 'user', content: resultater });
